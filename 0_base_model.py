@@ -7,7 +7,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install vllm
+# MAGIC %pip install vllm==0.1.3
 
 # COMMAND ----------
 
@@ -16,9 +16,6 @@ dbutils.library.restartPython()
 # COMMAND ----------
 
 # Setup
-import huggingface_hub
-huggingface_key = dbutils.secrets.get(scope='brian-hf', key='hf-key')
-huggingface_hub.login(token=huggingface_key)
 
 # setup home variables so that we don't run out of cache
 import os
@@ -99,14 +96,21 @@ from transformers import (
   AutoModelForCausalLM, pipeline, AutoTokenizer, 
 ) 
 
+username = spark.sql("SELECT current_user()").first()['current_user()']
+model_cache_root = f'/home/{username}/hf_models'
+
+
 model_id = "meta-llama/Llama-2-7b-hf"
 revision = "351b2c357c69b4779bde72c0e7f7da639443d904"
+model_path = f'{model_cache_root}/llama_2_7b'
 
 model_id = "meta-llama/Llama-2-13b-chat-hf"
 revision = "0ba94ac9b9e1d5a0037780667e8b219adde1908c"
+model_path = f'{model_cache_root}/llama_2_13b'
 
 # model_id = "meta-llama/Llama-2-70b-chat-hf"
 # revision = "36d9a7388cc80e5f4b3e9701ca2f250d21a96c30"
+# model_path = f'{model_cache_root}/llama_2_70b'
 
 n_loops = 10
 
@@ -120,11 +124,11 @@ tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
 model = AutoModelForCausalLM.from_pretrained(
-        model_id,
+        model_path,
         device_map = "auto",
         revision=revision,
         #torch_dtype=torch.bfloat16,
-        trust_remote_code=True,
+        local_files_only=True
     )
 
 # COMMAND ----------
@@ -182,7 +186,7 @@ quantization_config = BitsAndBytesConfig(
     bnb_4bit_compute_dtype=torch.bfloat16
 )
 
-tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
 compressed_model = AutoModelForCausalLM.from_pretrained(
@@ -190,7 +194,7 @@ compressed_model = AutoModelForCausalLM.from_pretrained(
         device_map = "auto",
         revision=revision,
         quantization_config=quantization_config,
-        trust_remote_code=True,
+        local_files_only=True,
     )
 
 # COMMAND ----------
@@ -218,11 +222,11 @@ tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
 compile_model = AutoModelForCausalLM.from_pretrained(
-        model_id,
+        model_path,
         device_map = "auto",
         revision=revision,
         #torch_dtype=torch.bfloat16,
-        trust_remote_code=True,
+        local_files_only=True,
     )
 
 compile_model = torch.compile(compile_model)
@@ -250,15 +254,13 @@ with torch.inference_mode():
 
 # MAGIC %md
 # MAGIC # vLLM
-# MAGIC This requires installing from git for now
+# MAGIC vllm should be installed on cluster side
 
 # COMMAND ----------
 
 from vllm import LLM, SamplingParams
 
-os.environ['HUGGING_FACE_HUB_TOKEN'] = huggingface_key
-
-llm = LLM(model=model_id,
+llm = LLM(model=model_path,
           tensor_parallel_size=4,
           dtype='bfloat16',
           #gpu_memory_utilization = 0.95,

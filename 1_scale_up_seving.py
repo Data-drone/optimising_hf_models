@@ -26,34 +26,10 @@ os.environ['HUGGING_FACE_HUB_TOKEN'] = huggingface_key
 
 # COMMAND ----------
 
-downloads_home = '/tmp/hf_ray_vllm/'
-dbutils.fs.mkdirs(downloads_home)
-dbfs_downloads_home = f'/dbfs{downloads_home}'
+username = spark.sql("SELECT current_user()").first()['current_user()']
+model_cache_root = f'/home/{username}/hf_models'
 
-#os.environ['RAY_DLOAD_DIR'] = f'{dbfs_downloads_home}llama_2_gpu'
-
-# setup model
-## We need to download it for all the workers as well
-from huggingface_hub import hf_hub_download, list_repo_files
-
-repo_list = {'llama_2_7b': 'meta-llama/Llama-2-7b-chat-hf',
-             'llama_2_13b': 'meta-llama/Llama-2-13b-chat-hf',
-             'llama_2_70b': 'meta-llama/Llama-2-70b-chat-hf'}
-
-for lib_name in repo_list.keys():
-    for name in list_repo_files(repo_list[lib_name]):
-        # skip all the safetensors data as we aren't using it and it's time consuming to download
-        if "safetensors" in name:
-            continue
-        target_path = os.path.join(dbfs_downloads_home, lib_name, name)
-        if not os.path.exists(target_path):
-            print(f"Downloading {name}")
-            hf_hub_download(
-                repo_list[lib_name],
-                filename=name,
-                local_dir=os.path.join(dbfs_downloads_home, lib_name),
-                local_dir_use_symlinks=False,
-            )
+model_path = f'{model_cache_root}/llama_2_70b'
 
 # COMMAND ----------
 
