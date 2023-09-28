@@ -32,7 +32,9 @@ from huggingface_hub import hf_hub_download, list_repo_files
 
 repo_list = {'llama_2_7b': 'meta-llama/Llama-2-7b-chat-hf',
              'llama_2_13b': 'meta-llama/Llama-2-13b-chat-hf',
-             'llama_2_70b': 'meta-llama/Llama-2-70b-chat-hf'}
+             'llama_2_13b_awq': 'TheBloke/Llama-2-13B-chat-AWQ'
+             'llama_2_70b': 'meta-llama/Llama-2-70b-chat-hf',
+             'llama_2_70b_awq': 'TheBloke/Llama-2-70B-chat-AWQ'}
 
 for lib_name in repo_list.keys():
     for name in list_repo_files(repo_list[lib_name]):
