@@ -39,7 +39,8 @@ repo_list = {'llama_2_7b': 'meta-llama/Llama-2-7b-chat-hf',
 for lib_name in repo_list.keys():
     for name in list_repo_files(repo_list[lib_name]):
         # skip all the safetensors data as we aren't using it and it's time consuming to download
-        if "safetensors" in name:
+        # We do need safetensors for the awq models though
+        if "safetensors" in name and 'awq' not in lib_name.split("_"):
             continue
         target_path = os.path.join(dbfs_downloads_home, lib_name, name)
         if not os.path.exists(target_path):
